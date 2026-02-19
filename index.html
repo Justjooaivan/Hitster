@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hitster Harjoitus</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="hero card">
+        <p class="eyebrow">Hitster-harjoitus</p>
+        <h1>Arvaa biisin julkaisuvuosi 🎵</h1>
+        <p class="intro">
+          Paina nappia, kuuntele kappale Spotifysta ja arvaa vuosi. Peli kestää 5 kierrosta.
+        </p>
+        <p id="libraryInfo" class="library"></p>
+      </div>
+
+      <section class="card settings" aria-live="polite">
+        <h2>Spotify-asetukset</h2>
+        <p class="small">Liitä tähän Spotify Developer Appin <strong>Client ID</strong> (ei salasana).</p>
+        <label for="clientIdInput">Spotify Client ID</label>
+        <input id="clientIdInput" type="text" autocomplete="off" placeholder="esim. 191f..." />
+        <button id="saveClientIdBtn" class="btn">Tallenna Client ID</button>
+        <p id="clientIdStatus" class="result"></p>
+      </section>
+
+      <section class="card status" aria-live="polite">
+        <p><strong>Kierros</strong><span id="roundText">0 / 5</span></p>
+        <p><strong>Pisteet</strong><span id="scoreText">0</span></p>
+      </section>
+
+      <button id="drawSongBtn" class="btn primary">🎧 Soita satunnainen biisi</button>
+
+      <section id="gameArea" class="card hidden" aria-live="polite">
+        <p><strong>Kappale:</strong> <span id="songTitle">-</span></p>
+        <div class="embed-wrap">
+          <a id="spotifyDirectLink" class="spotify-direct-link" href="#" target="_blank" rel="noopener noreferrer">Avaa kappale Spotifyssa</a>
+          <p class="spotify-help-text">Jos Spotify-upotus antaa 404-virheen, avaa kappale yllä olevasta linkistä.</p>
+        </div>
+
+        <label for="yearGuess">Arvaa vuosi</label>
+        <input id="yearGuess" type="number" inputmode="numeric" placeholder="esim. 1998" min="1900" max="2030" />
+
+        <button id="checkBtn" class="btn">Tarkista</button>
+        <p id="resultText" class="result"></p>
+      </section>
+
+      <section id="summaryArea" class="card hidden" aria-live="polite">
+        <h2>Peli päättyi 🎉</h2>
+        <p id="summaryText"></p>
+        <button id="restartBtn" class="btn">Aloita uusi 5 kierroksen peli</button>
+      </section>
+
+      <section class="card note">
+        <h2>Huomio kappalelistasta</h2>
+        <p>
+          Tässä versiossa on laajempi harjoituskirjasto eri vuosikymmeniltä (1930-luvulta alkaen),
+          mutta ei vielä jokaisen vuoden virallista Top 20 -listaa.
+        </p>
+        <p>
+          Jos haluat, seuraavassa vaiheessa voin rakentaa erillisen tietokannan (esim. CSV/JSON),
+          johon tuodaan jokaiselle vuodelle top-kappaleet.
+        </p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      if (!window.HITSTER_APP_LOADED) {
+        const drawSongBtn = document.getElementById("drawSongBtn");
+        const clientIdStatus = document.getElementById("clientIdStatus");
+        drawSongBtn.disabled = true;
+        clientIdStatus.textContent = "Sovelluksen skriptiä ei löytynyt. Varmista, että index.html, app.js ja styles.css ovat samassa kansiossa.";
+      }
+    </script>
+  </body>
+</html>
