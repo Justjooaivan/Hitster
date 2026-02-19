@@ -38,8 +38,10 @@ const fallbackSongs = [
 const MAX_ROUNDS = 5;
 const CLIENT_ID_STORAGE_KEY = "hitster_spotify_client_id";
 const SONG_CSV_PATHS = [
+  "musiikkihitit_1930_2025_spotify_toimiva.csv",
   "musiikkihitit_1930_2025_spotify.csv",
   "musiikkihitit_1930_2025_yhdistetty.csv",
+  "https://raw.githubusercontent.com/Justjooaivan/Hitster/main/musiikkihitit_1930_2025_spotify_toimiva.csv",
   "https://raw.githubusercontent.com/Justjooaivan/Hitster/main/musiikkihitit_1930_2025_spotify.csv"
 ];
 
@@ -60,6 +62,8 @@ const restartBtn = document.getElementById("restartBtn");
 const clientIdInput = document.getElementById("clientIdInput");
 const saveClientIdBtn = document.getElementById("saveClientIdBtn");
 const clientIdStatus = document.getElementById("clientIdStatus");
+const testEmbedBtn = document.getElementById("testEmbedBtn");
+const embedTestStatus = document.getElementById("embedTestStatus");
 const libraryInfo = document.getElementById("libraryInfo");
 
 let currentSong = null;
@@ -319,6 +323,27 @@ async function loadSongsFromCsv() {
   clientIdStatus.textContent = "CSV-dataa ei löytynyt, käytetään esimerkkikappaleita.";
 }
 
+async function runEmbedTest() {
+  if (!embedTestStatus) {
+    return;
+  }
+
+  embedTestStatus.textContent = "Testataan upotusta...";
+  const knownTrackId = "0VjIjW4GlUZAMYd2vXMi3b";
+  const valid = await isTrackEmbeddable(knownTrackId);
+
+  if (valid) {
+    if (spotifyEmbed) {
+      spotifyEmbed.src = toSpotifyEmbedUrl(knownTrackId);
+      spotifyEmbed.classList.remove("hidden");
+    }
+    embedTestStatus.textContent = "Spotify-upotus toimii tällä selaimella.";
+    return;
+  }
+
+  embedTestStatus.textContent = "Spotify-upotus ei vastannut odotetusti. Tarkista selaimen yksityisyysasetukset tai kirjautuminen Spotifyyn.";
+}
+
 function loadClientIdFromStorage() {
   const savedClientId = localStorage.getItem(CLIENT_ID_STORAGE_KEY);
 
@@ -482,3 +507,4 @@ checkBtn?.addEventListener("click", checkGuess);
 restartBtn?.addEventListener("click", restartGame);
 saveClientIdBtn?.addEventListener("click", saveClientId);
 revealTitleBtn?.addEventListener("click", toggleTitleVisibility);
+testEmbedBtn?.addEventListener("click", runEmbedTest);

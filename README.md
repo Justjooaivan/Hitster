@@ -62,6 +62,7 @@ Jos et näe kohtaa **Files**:
 - Päivitä sivu kerran.
 - Liitä Client ID uudelleen.
 - Paina uudelleen **Tallenna Client ID**.
+- Paina **Testaa Spotify-upotus**: se yrittää avata tunnetusti toimivan testibiisin upotukseen.
 
 ---
 
@@ -127,7 +128,7 @@ Koska tämä on pelkkä HTML/CSS/JS-versio, voit avata tiedoston suoraan selaime
 - Spotify-soitin toimii suoraan sivulla, kun CSV-rivillä on `spotify_track_id` tai `spotify_url`.
 
 ## CSV-lista käytössä (1930-2025)
-Sovellus yrittää ladata ensin `musiikkihitit_1930_2025_spotify.csv` tiedoston projektin juuresta, sitten varalla `musiikkihitit_1930_2025_yhdistetty.csv`, ja lopuksi GitHub RAW -osoitteen samasta CSV:stä.
+Sovellus yrittää ladata ensin `musiikkihitit_1930_2025_spotify_toimiva.csv` tiedoston projektin juuresta, sitten muut CSV-varavaihtoehdot.
 
 Jos tiedosto löytyy, peli käyttää sitä. Jos tiedostoa ei löydy tai se on tyhjä, peli käyttää varalistaa.
 
