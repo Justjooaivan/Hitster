@@ -75,26 +75,31 @@ function toSpotifyEmbedUrl(trackId) {
   return `https://open.spotify.com/embed/track/${encodeURIComponent(trackId)}?utm_source=generator&autoplay=1`;
 }
 
-function toSpotifyEmbedSearchUrl(query) {
-  return `https://open.spotify.com/embed/search/${encodeURIComponent(query)}?utm_source=generator`;
-}
-
-function extractTrackId(spotifyUrl) {
-  if (!spotifyUrl) {
+function extractTrackId(text) {
+  if (!text) {
     return "";
   }
 
-  const trackUrlMatch = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+  const trackUrlMatch = text.match(/track\/([a-zA-Z0-9]+)/);
   if (trackUrlMatch) {
     return trackUrlMatch[1];
   }
 
-  const spotifyUriMatch = spotifyUrl.match(/spotify:track:([a-zA-Z0-9]+)/);
+  const spotifyUriMatch = text.match(/spotify:track:([a-zA-Z0-9]+)/);
   if (spotifyUriMatch) {
     return spotifyUriMatch[1];
   }
 
+  const plainIdMatch = text.match(/^[a-zA-Z0-9]{22}$/);
+  if (plainIdMatch) {
+    return plainIdMatch[0];
+  }
+
   return "";
+}
+
+function getPlayableTrackId(song) {
+  return extractTrackId(song.trackId) || extractTrackId(song.spotifyUrl);
 }
 
 function updateSpotifyPlayer(song) {
@@ -102,16 +107,10 @@ function updateSpotifyPlayer(song) {
     return;
   }
 
-  const trackId = song.trackId || extractTrackId(song.spotifyUrl);
+  const trackId = getPlayableTrackId(song);
 
   if (trackId) {
     spotifyEmbed.src = toSpotifyEmbedUrl(trackId);
-    spotifyEmbed.classList.remove("hidden");
-    return;
-  }
-
-  if (song.query) {
-    spotifyEmbed.src = toSpotifyEmbedSearchUrl(song.query);
     spotifyEmbed.classList.remove("hidden");
     return;
   }
@@ -224,7 +223,7 @@ function parseSongsFromCsv(text) {
       year,
       query: query || `${artist} ${title}`,
       spotifyUrl,
-      trackId
+      trackId: extractTrackId(trackId)
     });
   }
 
@@ -321,10 +320,20 @@ function drawSong() {
     return;
   }
 
-  currentSong = pickRandomSong();
+  let attempts = songs.length;
+  currentSong = null;
+
+  while (attempts > 0) {
+    const candidate = pickRandomSong();
+    if (candidate && getPlayableTrackId(candidate)) {
+      currentSong = candidate;
+      break;
+    }
+    attempts -= 1;
+  }
 
   if (!currentSong) {
-    resultText.textContent = "Kappaleita ei löytynyt.";
+    resultText.textContent = "Tälle listalle ei löytynyt toimivia Spotify-kappaleita.";
     return;
   }
 

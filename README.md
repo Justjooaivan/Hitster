@@ -55,7 +55,7 @@ Jos et näe kohtaa **Files**:
 
 
 ### Spotify-soitin suoraan pelissä
-- Kun CSV:ssä on `spotify_track_id`, `spotify_url` tai `spotify_uri`, biisi avautuu suoraan sivulla olevaan Spotify-soittimeen. Soitto yritetään käynnistää automaattisesti.
+- Kun CSV:ssä on kelvollinen Spotify track ID (`spotify_track_id`, `spotify_url` tai `spotify_uri`), biisi avautuu suoraan sivulla olevaan Spotify-soittimeen. Soitto yritetään käynnistää automaattisesti.
 - Kappaleen nimi on piilotettu oletuksena ja näkyy vain, jos painat **Näytä kappaleen nimi**.
 
 ### Jos jokin ei toimi
