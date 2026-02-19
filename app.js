@@ -38,10 +38,8 @@ const fallbackSongs = [
 const MAX_ROUNDS = 5;
 const CLIENT_ID_STORAGE_KEY = "hitster_spotify_client_id";
 const SONG_CSV_PATHS = [
-  "musiikkihitit_1930_2025_spotify_toimiva.csv",
   "musiikkihitit_1930_2025_spotify.csv",
   "musiikkihitit_1930_2025_yhdistetty.csv",
-  "https://raw.githubusercontent.com/Justjooaivan/Hitster/main/musiikkihitit_1930_2025_spotify_toimiva.csv",
   "https://raw.githubusercontent.com/Justjooaivan/Hitster/main/musiikkihitit_1930_2025_spotify.csv"
 ];
 
