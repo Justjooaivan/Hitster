@@ -139,5 +139,6 @@ year,artist,title,spotify_query,spotify_url,spotify_track_id
 ```
 
 - `spotify_track_id` on paras (esim. `4uLU6hMCjMI75M1A2tKUQC`).
+- Tuettuja avaimia ovat myös esim. `spotify_id`, `spotify id`, `spotify_uri`, `spotify url`.
 - Vaihtoehtoisesti voit antaa `spotify_url` (esim. `https://open.spotify.com/track/...`).
 - Tuettuja otsikoita ovat myös suomenkieliset nimet (`vuosi`, `artisti`, `kappale`) sekä puolipiste-erotin (`;`).

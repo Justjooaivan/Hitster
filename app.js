@@ -201,6 +201,15 @@ function keyToIndexMap(headers) {
   return map;
 }
 
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (value && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
 function getValue(columns, indexMap, keys) {
   for (const key of keys) {
     const index = indexMap[key];
@@ -213,7 +222,8 @@ function getValue(columns, indexMap, keys) {
 
 function parseSongsFromCsv(text) {
   const lines = text
-    .split(/\r?\n/)
+    .split(/?
+/)
     .map((line) => line.trim())
     .filter(Boolean);
 
@@ -222,18 +232,36 @@ function parseSongsFromCsv(text) {
   }
 
   const delimiter = pickDelimiter(lines[0]);
-  const headers = parseCsvLine(lines[0], delimiter).map((header) => header.replace(/^\ufeff/, "").toLowerCase());
+  const headers = parseCsvLine(lines[0], delimiter).map((header) => header.replace(/^﻿/, "").toLowerCase());
   const indexMap = keyToIndexMap(headers);
   const parsedSongs = [];
+  const hasNamedColumns = headers.some((header) => ["year", "vuosi", "artist", "artisti", "title", "kappale"].includes(header));
 
   for (let i = 1; i < lines.length; i += 1) {
     const columns = parseCsvLine(lines[i], delimiter);
-    const titleValue = getValue(columns, indexMap, ["title", "song", "kappale", "track", "kappale_nimi", "biisi"]);
-    const artistValue = getValue(columns, indexMap, ["artist", "artisti", "esittaja", "artisti_nimi"]);
-    const yearText = getValue(columns, indexMap, ["year", "vuosi", "julkaisuvuosi"]);
-    const query = getValue(columns, indexMap, ["spotify_query", "query", "haku"]);
-    const spotifyUrl = getValue(columns, indexMap, ["spotify_url", "url", "spotify_link", "linkki"]);
-    const trackId = getValue(columns, indexMap, ["spotify_track_id", "track_id", "spotifyid", "spotify_uri", "spotify_track_uri"]);
+
+    let titleValue = "";
+    let artistValue = "";
+    let yearText = "";
+    let query = "";
+    let spotifyUrl = "";
+    let trackId = "";
+
+    if (hasNamedColumns) {
+      titleValue = getValue(columns, indexMap, ["title", "song", "kappale", "track", "kappale_nimi", "biisi", "nimi"]);
+      artistValue = getValue(columns, indexMap, ["artist", "artisti", "esittaja", "artisti_nimi", "artisti nimi"]);
+      yearText = getValue(columns, indexMap, ["year", "vuosi", "julkaisuvuosi", "release_year"]);
+      query = getValue(columns, indexMap, ["spotify_query", "query", "haku"]);
+      spotifyUrl = getValue(columns, indexMap, ["spotify_url", "url", "spotify_link", "linkki", "spotify url"]);
+      trackId = getValue(columns, indexMap, ["spotify_track_id", "track_id", "spotifyid", "spotify_id", "spotify id", "spotify_uri", "spotify_track_uri", "spotify uri", "spotify"]);
+    } else {
+      yearText = columns[0] || "";
+      artistValue = columns[1] || "";
+      titleValue = columns[2] || "";
+      query = columns[3] || "";
+      trackId = columns[columns.length - 1] || "";
+    }
+
     const year = Number(yearText);
 
     let title = titleValue;
@@ -245,7 +273,9 @@ function parseSongsFromCsv(text) {
       title = splitTitle.join(" - ").trim();
     }
 
-    if (!title || !artist || !Number.isFinite(year)) {
+    const normalizedTrackId = extractTrackId(firstNonEmpty(trackId, spotifyUrl, query, titleValue));
+
+    if (!title || !artist || !Number.isFinite(year) || !normalizedTrackId) {
       continue;
     }
 
@@ -254,12 +284,13 @@ function parseSongsFromCsv(text) {
       year,
       query: query || `${artist} ${title}`,
       spotifyUrl,
-      trackId: extractTrackId(trackId)
+      trackId: normalizedTrackId
     });
   }
 
   return parsedSongs;
 }
+
 
 function pickRandomSong() {
   if (bag.length === 0) {
