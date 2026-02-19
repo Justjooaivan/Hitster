@@ -69,6 +69,8 @@ let canCheckGuess = false;
 let bag = [];
 let songs = [...fallbackSongs];
 let isTitleRevealed = false;
+const trackEmbedValidityCache = new Map();
+let canUseOEmbedValidation = true;
 
 
 function toSpotifyEmbedUrl(trackId) {
@@ -100,6 +102,33 @@ function extractTrackId(text) {
 
 function getPlayableTrackId(song) {
   return extractTrackId(song.trackId) || extractTrackId(song.spotifyUrl);
+}
+
+async function isTrackEmbeddable(trackId) {
+  if (!trackId) {
+    return false;
+  }
+
+  if (!canUseOEmbedValidation) {
+    return true;
+  }
+
+  if (trackEmbedValidityCache.has(trackId)) {
+    return trackEmbedValidityCache.get(trackId);
+  }
+
+  const trackUrl = `https://open.spotify.com/track/${encodeURIComponent(trackId)}`;
+  const oEmbedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(trackUrl)}`;
+
+  try {
+    const response = await fetch(oEmbedUrl, { method: "GET" });
+    const valid = response.ok;
+    trackEmbedValidityCache.set(trackId, valid);
+    return valid;
+  } catch {
+    canUseOEmbedValidation = false;
+    return true;
+  }
 }
 
 function updateSpotifyPlayer(song) {
@@ -314,23 +343,31 @@ function saveClientId() {
   clientIdStatus.textContent = "Client ID tallennettu selaimeen onnistuneesti.";
 }
 
-function drawSong() {
+async function drawSong() {
   if (round >= MAX_ROUNDS) {
     resultText.textContent = "Peli on päättynyt. Aloita uusi peli.";
     return;
   }
+
+  drawSongBtn.disabled = true;
+  resultText.textContent = "Haetaan toimivaa Spotify-upotusta...";
 
   let attempts = songs.length;
   currentSong = null;
 
   while (attempts > 0) {
     const candidate = pickRandomSong();
-    if (candidate && getPlayableTrackId(candidate)) {
+    const trackId = candidate ? getPlayableTrackId(candidate) : "";
+
+    if (trackId && await isTrackEmbeddable(trackId)) {
       currentSong = candidate;
       break;
     }
+
     attempts -= 1;
   }
+
+  drawSongBtn.disabled = false;
 
   if (!currentSong) {
     resultText.textContent = "Tälle listalle ei löytynyt toimivia Spotify-kappaleita.";
