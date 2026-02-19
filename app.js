@@ -72,7 +72,11 @@ let isTitleRevealed = false;
 
 
 function toSpotifyEmbedUrl(trackId) {
-  return `https://open.spotify.com/embed/track/${encodeURIComponent(trackId)}?utm_source=generator`;
+  return `https://open.spotify.com/embed/track/${encodeURIComponent(trackId)}?utm_source=generator&autoplay=1`;
+}
+
+function toSpotifyEmbedSearchUrl(query) {
+  return `https://open.spotify.com/embed/search/${encodeURIComponent(query)}?utm_source=generator`;
 }
 
 function extractTrackId(spotifyUrl) {
@@ -80,8 +84,17 @@ function extractTrackId(spotifyUrl) {
     return "";
   }
 
-  const match = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
-  return match ? match[1] : "";
+  const trackUrlMatch = spotifyUrl.match(/track\/([a-zA-Z0-9]+)/);
+  if (trackUrlMatch) {
+    return trackUrlMatch[1];
+  }
+
+  const spotifyUriMatch = spotifyUrl.match(/spotify:track:([a-zA-Z0-9]+)/);
+  if (spotifyUriMatch) {
+    return spotifyUriMatch[1];
+  }
+
+  return "";
 }
 
 function updateSpotifyPlayer(song) {
@@ -93,6 +106,12 @@ function updateSpotifyPlayer(song) {
 
   if (trackId) {
     spotifyEmbed.src = toSpotifyEmbedUrl(trackId);
+    spotifyEmbed.classList.remove("hidden");
+    return;
+  }
+
+  if (song.query) {
+    spotifyEmbed.src = toSpotifyEmbedSearchUrl(song.query);
     spotifyEmbed.classList.remove("hidden");
     return;
   }
@@ -184,7 +203,7 @@ function parseSongsFromCsv(text) {
     const yearText = getValue(columns, indexMap, ["year", "vuosi", "julkaisuvuosi"]);
     const query = getValue(columns, indexMap, ["spotify_query", "query", "haku"]);
     const spotifyUrl = getValue(columns, indexMap, ["spotify_url", "url", "spotify_link", "linkki"]);
-    const trackId = getValue(columns, indexMap, ["spotify_track_id", "track_id", "spotifyid"]);
+    const trackId = getValue(columns, indexMap, ["spotify_track_id", "track_id", "spotifyid", "spotify_uri", "spotify_track_uri"]);
     const year = Number(yearText);
 
     let title = titleValue;
