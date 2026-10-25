@@ -10,17 +10,24 @@ import json
 from pathlib import Path
 
 from pyicloud import PyiCloudService
+from pyicloud.exceptions import PyiCloudFailedLoginException
 
 BASE_DIR = Path(__file__).resolve().parent
 cfg = json.loads((BASE_DIR / "config.json").read_text(encoding="utf-8"))["icloud"]
 
-api = PyiCloudService(
-    cfg["apple_id"],
-    cfg.get("password") or None,
-    cookie_directory=str(BASE_DIR / "icloud_session"),
-    with_family=True,
-    refresh_interval=None,
-)
+try:
+    api = PyiCloudService(
+        cfg["apple_id"],
+        cfg.get("password") or None,
+        cookie_directory=str(BASE_DIR / "icloud_session"),
+        with_family=True,
+        refresh_interval=None,
+    )
+except PyiCloudFailedLoginException:
+    raise SystemExit(
+        f"Apple ei hyväksynyt tunnusta {cfg['apple_id']!r} ja salasanaa.\n"
+        "Tarkista config.jsonista kohdat apple_id ja password (nano config.json)."
+    ) from None
 
 if api.requires_2fa:
     # pyydetään Applea lähettämään koodi (tekstiviesti tai Apple-laitteen ilmoitus)
