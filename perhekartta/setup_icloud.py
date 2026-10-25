@@ -23,9 +23,23 @@ api = PyiCloudService(
 )
 
 if api.requires_2fa:
-    code = input("Syötä Applen lähettämä 6-numeroinen koodi: ").strip()
-    if not api.validate_2fa_code(code):
-        raise SystemExit("Koodi ei kelvannut. Yritä uudelleen.")
+    # pyydetään Applea lähettämään koodi (tekstiviesti tai Apple-laitteen ilmoitus)
+    try:
+        api.request_2fa_code()
+    except Exception as exc:
+        print(f"Koodin pyytäminen ei onnistunut ({exc}). Jos sait koodin silti, syötä se.")
+    if api.two_factor_delivery_method == "sms":
+        print("Apple lähettää koodin tekstiviestinä puhelimeesi.")
+    else:
+        print("Apple lähettää koodin Apple-laitteellesi.")
+
+    for attempt in range(3):
+        code = input("Syötä 6-numeroinen koodi: ").strip().replace(" ", "")
+        if api.validate_2fa_code(code):
+            break
+        print("Koodi ei kelvannut, yritä uudelleen.")
+    else:
+        raise SystemExit("Koodi ei kelvannut kolmella yrityksellä. Aja skripti uudelleen.")
     if not api.is_trusted_session:
         api.trust_session()
 elif api.requires_2sa:
