@@ -30,9 +30,12 @@ except PyiCloudFailedLoginException:
     ) from None
 
 if api.requires_2fa:
-    # pyydetään Applea lähettämään koodi (tekstiviesti tai Apple-laitteen ilmoitus)
+    # pyydetään koodi ensisijaisesti tekstiviestinä, koska Apple-laitetta ei välttämättä ole
     try:
-        api.request_2fa_code()
+        if getattr(api, "_can_request_sms_2fa_code", lambda: False)():
+            api._request_sms_2fa_code()
+        else:
+            api.request_2fa_code()
     except Exception as exc:
         print(f"Koodin pyytäminen ei onnistunut ({exc}). Jos sait koodin silti, syötä se.")
     if api.two_factor_delivery_method == "sms":
