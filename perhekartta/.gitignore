@@ -4,3 +4,4 @@ google_cookies.txt
 icloud_session/
 .venv/
 __pycache__/
+secret_key.txt

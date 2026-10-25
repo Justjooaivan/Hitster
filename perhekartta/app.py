@@ -8,10 +8,18 @@ import json
 import secrets
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, request, send_from_directory
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    request,
+    send_from_directory,
+    session,
+    url_for,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = BASE_DIR / "config.json"
@@ -19,6 +27,18 @@ ICLOUD_SESSION_DIR = BASE_DIR / "icloud_session"
 MIN_REFRESH_SECONDS = 15  # ei kuormiteta Applea ja Googlea turhaan
 
 app = Flask(__name__, static_folder=str(BASE_DIR / "static"))
+
+
+def _secret_key():
+    """Kirjautumiseväste allekirjoitetaan tällä avaimella (luodaan ensimmäisellä käynnistyksellä)."""
+    key_file = BASE_DIR / "secret_key.txt"
+    if not key_file.exists():
+        key_file.write_text(secrets.token_hex(32))
+    return key_file.read_text().strip()
+
+
+app.secret_key = _secret_key()
+app.permanent_session_lifetime = timedelta(days=365)
 
 
 def load_config():
@@ -177,24 +197,51 @@ def get_locations(force=False):
 # ----------------------------------------------------------------- web -----
 
 
+PUBLIC_PATHS = {"/login", "/manifest.webmanifest", "/sw.js"}
+
+
 @app.before_request
-def require_password():
-    password = CONFIG.get("app_password")
-    if not password:
+def require_login():
+    if not CONFIG.get("app_password") or session.get("ok"):
         return None
-    auth = request.authorization
-    if auth and secrets.compare_digest(
-        (auth.password or "").encode(), password.encode()
-    ):
+    if request.path in PUBLIC_PATHS or request.path.startswith("/static/"):
         return None
-    return Response(
-        "Kirjaudu sisään", 401, {"WWW-Authenticate": 'Basic realm="Perhekartta"'}
-    )
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "login"}), 401
+    return redirect(url_for("login"))
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = ""
+    if request.method == "POST":
+        given = request.form.get("password", "").encode()
+        if secrets.compare_digest(given, CONFIG.get("app_password", "").encode()):
+            session.permanent = True  # pysyy kirjautuneena vuoden
+            session["ok"] = True
+            return redirect(url_for("index"))
+        time.sleep(1)  # hidastaa arvailua
+        error = "Väärä salasana"
+    page = (BASE_DIR / "static" / "login.html").read_text(encoding="utf-8")
+    return page.replace("{{error}}", error)
 
 
 @app.get("/")
 def index():
     return send_from_directory(app.static_folder, "index.html")
+
+
+@app.get("/manifest.webmanifest")
+def manifest():
+    return send_from_directory(
+        app.static_folder, "manifest.webmanifest", mimetype="application/manifest+json"
+    )
+
+
+@app.get("/sw.js")
+def service_worker():
+    # palvellaan juuresta, jotta service worker kattaa koko sovelluksen
+    return send_from_directory(app.static_folder, "sw.js", mimetype="text/javascript")
 
 
 @app.get("/api/locations")

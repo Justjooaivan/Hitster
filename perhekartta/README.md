@@ -5,9 +5,9 @@ Näyttää molempien tyttärien sijainnit **samalla kartalla**:
 - **iPhone** → haetaan iCloudin Find My -palvelusta (sama kuin icloud.com/find)
 - **Android** → haetaan Googlen sijainninjaosta (sama kuin Google Mapsin "Sijainnin jakaminen")
 
-Sovellus pyörii **omalla koneellasi** (esim. kotikone tai Raspberry Pi), joten
-Apple- ja Google-tunnuksesi eivät lähde minnekään muualle. Avaat kartan
-puhelimen selaimella ja voit lisätä sen kotivalikkoon kuin sovelluksen.
+Puhelimessa Perhekartta näkyy omana sovelluksenaan. Sijainnit hakee pieni
+palvelin, joka pyörii **omalla koneellasi** (esim. kotikone tai Raspberry Pi),
+joten Apple- ja Google-tunnuksesi eivät lähde minnekään muualle.
 
 ## Mitä tarvitset ensin
 
@@ -38,7 +38,7 @@ Täytä `config.json`:
 | `icloud.devices` | Tytön puhelimen nimi → nimi kartalla (nimen saat seuraavasta vaiheesta) |
 | `google.account` | Oma Gmail-osoitteesi |
 | `google.people` | Tytön nimi Googlessa → nimi kartalla |
-| `app_password` | Oma salasana kartalle (selain kysyy sen; käyttäjänimeksi käy mikä tahansa) |
+| `app_password` | Oma salasana, jolla kirjaudut sovellukseen puhelimella |
 
 Jos jätät `devices`- tai `people`-kohdan tyhjäksi (`{}`), kaikki näkyvät henkilöt/laitteet näytetään.
 
@@ -71,12 +71,34 @@ Evästeet ovat käytännössä Google-tilisi avain, joten älä jaa tiedostoa ke
 python app.py
 ```
 
-Avaa selaimessa `http://<koneen-ip>:8080` (samassa kotiverkossa). Puhelimessa:
-Safari → Jaa → *Lisää Koti-valikkoon* / Chrome → ⋮ → *Lisää aloitusnäyttöön*.
+Kone, jolla sovellus pyörii, pitää olla päällä aina, kun haluat katsoa karttaa.
+Pieni Raspberry Pi tai vanha läppäri, joka on jatkuvasti päällä, sopii tähän hyvin.
 
-Jos haluat avata kartan kodin ulkopuolelta, helpoin turvallinen tapa on
-[Tailscale](https://tailscale.com) (ilmainen): asenna se koneelle ja puhelimeen.
-**Älä avaa porttia suoraan internetiin.**
+### 4. Sovellus Android-puhelimeen
+
+Chrome asentaa Perhekartan oikeaksi sovellukseksi (oma kuvake, avautuu koko
+näytölle ilman selainta), mutta se vaatii **https-osoitteen**. Helpoin tapa saada
+se, ja samalla pääsy kartalle myös kodin ulkopuolelta, on ilmainen
+[Tailscale](https://tailscale.com):
+
+1. Asenna Tailscale koneelle, jolla `app.py` pyörii, ja kirjaudu sisään
+   (esim. Google-tililläsi).
+2. Asenna **Tailscale**-sovellus Play Kaupasta omaan puhelimeesi ja kirjaudu samalla tilillä.
+3. Aja koneella kerran:
+   ```bash
+   tailscale serve --bg 8080
+   ```
+   Komento tulostaa osoitteen, esim. `https://kotikone.tail1234.ts.net`.
+   (Jos se pyytää ottamaan HTTPS:n käyttöön Tailscalen hallintasivulla, tee niin.)
+4. Avaa osoite puhelimen **Chromessa** ja kirjaudu `app_password`-salasanalla.
+5. Chrome → ⋮ → **Asenna sovellus** (tai *Lisää aloitusnäyttöön → Asenna*).
+
+Nyt kotinäytöllä on Perhekartta-kuvake. Kirjautuminen säilyy vuoden.
+Kartta ei näy kenellekään muulle, koska Tailscale-osoitteeseen pääsevät vain
+omat laitteesi. **Älä avaa porttia suoraan internetiin.**
+
+Kotiverkossa voi kokeilla myös ilman Tailscalea osoitteella `http://<koneen-ip>:8080`,
+mutta silloin Chrome tekee vain pikakuvakkeen, joka avaa sivun selaimeen.
 
 ## Miten sovellus toimii
 
