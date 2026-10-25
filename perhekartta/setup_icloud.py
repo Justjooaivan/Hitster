@@ -32,10 +32,40 @@ except PyiCloudFailedLoginException:
 if api.requires_2fa:
     # Pyydetään koodi tekstiviestinä. Apple ehdottaa muuten Apple-laitetta,
     # jos tiliin on joskus liitetty sellainen.
+    def fetch_phone_number():
+        """Kysyy Applelta tiliin liitetyn puhelinnumeron (sama tieto kuin iCloud-sivun
+        'Lähetä tekstiviestinä' -valinnassa)."""
+        headers = api._get_auth_headers({"Accept": "application/json"})
+        try:
+            data = api.session.get(api._auth_endpoint, headers=headers).json()
+        except Exception as exc:  # Apple voi vastata 409:llä, jolloin tieto on virheen mukana
+            try:
+                data = exc.response.json()
+            except Exception:
+                return None
+        if not isinstance(data, dict):
+            return None
+        verification = data.get("phoneNumberVerification") or {}
+        numbers = data.get("trustedPhoneNumbers") or verification.get("trustedPhoneNumbers") or []
+        phone = (
+            data.get("trustedPhoneNumber")
+            or verification.get("trustedPhoneNumber")
+            or (numbers[0] if numbers else None)
+        )
+        if not phone:
+            print(f"(Applen vastauksessa ei ollut puhelinnumeroa: {sorted(data)})")
+            return None
+        api._auth_data["trustedPhoneNumber"] = phone
+        return phone
+
     def request_sms():
-        phone = getattr(api, "_trusted_phone_number", lambda: None)()
-        if phone is None:
-            return False
+        if getattr(api, "_trusted_phone_number", lambda: None)() is None:
+            phone = fetch_phone_number()
+            if phone is None:
+                return False
+            number = phone.get("numberWithDialCode") or phone.get("obfuscatedNumber")
+            if number:
+                print(f"Puhelinnumero: {number}")
         api._request_sms_2fa_code()
         return True
 
