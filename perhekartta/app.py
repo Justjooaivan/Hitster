@@ -125,20 +125,58 @@ def fetch_icloud():
 # ---------------------------------------------------------------- Google ----
 
 
+def _save_google_cookies(jar, path):
+    """Tallentaa Googlen päivittämät evästeet takaisin tiedostoon.
+
+    Google vaihtaa kirjautumisevästeitä ajoittain. Kun uudet arvot tallennetaan,
+    kirjautuminen pysyy voimassa pidempään eikä evästeitä tarvitse viedä uudelleen.
+    """
+    lines = [
+        "\t".join(
+            [
+                c.domain,
+                "TRUE" if c.domain.startswith(".") else "FALSE",
+                c.path or "/",
+                "TRUE" if c.secure else "FALSE",
+                str(int(c.expires or 0)),
+                c.name,
+                c.value or "",
+            ]
+        )
+        for c in jar
+        if c.value
+    ]
+    new_text = "# Netscape HTTP Cookie File\n" + "\n".join(lines) + "\n"
+    if path.read_text(encoding="utf-8") == new_text:
+        return
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(new_text, encoding="utf-8")
+    tmp.replace(path)
+
+
 def fetch_google():
     cfg = CONFIG.get("google")
     if not cfg or not cfg.get("account"):
         return []
     from locationsharinglib import Service
+    from locationsharinglib.locationsharinglibexceptions import InvalidCookies
 
     cookies = BASE_DIR / cfg.get("cookies_file", "google_cookies.txt")
     if not cookies.exists():
         raise RuntimeError(f"Google-evästetiedostoa ei löydy: {cookies.name}")
-    service = Service(cookies_file=str(cookies), authenticating_account=cfg["account"])
+    try:
+        service = Service(cookies_file=str(cookies), authenticating_account=cfg["account"])
+    except InvalidCookies:
+        raise RuntimeError(
+            "Googlen evästeet ovat vanhentuneet. Vie uudet evästeet "
+            "(VIRHETILANTEET.md, Ohje B)."
+        ) from None
     wanted = cfg.get("people") or {}
+    shared = service.get_shared_people()
+    _save_google_cookies(service._session.cookies, cookies)
 
     people = []
-    for person in service.get_shared_people():
+    for person in shared:
         key = next(
             (k for k in (person.full_name, person.nickname) if k and k in wanted), None
         )

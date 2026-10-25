@@ -76,67 +76,84 @@ Voit sulkea PowerShell-ikkunan.
 
 Tarvitset: Windows-koneen ja Chromen.
 
-### Osa 1: Uudet evästeet Chromesta
+### Osa 1: Uudet evästeet Chromen incognito-ikkunasta
 
-**1.** Avaa Windows-koneella **Chrome**.
+Evästeet viedään **incognito-ikkunasta**, joka suljetaan heti perään. Silloin mikään
+selain ei enää käytä samaa kirjautumista, eikä Google vaihda evästeitä niin, että
+Raspberry Pi:n kopio vanhenisi.
 
-**2.** Kirjoita osoiteriville **google.com/maps** ja paina **Enter**.
+**Vain ensimmäisellä kerralla:** salli laajennus incognito-ikkunassa.
 
-**3.** Katso oikeasta yläkulmasta, että olet kirjautunut omalla Google-tililläsi (ville.rihtamo@…).
+1. Avaa Windows-koneella **Chrome**.
+2. Kirjoita osoiteriville `chrome://extensions` ja paina **Enter**.
+3. Etsi **Get cookies.txt LOCALLY** ja paina sen kohdalla **Tiedot**.
+4. Laita päälle kytkin **Salli incognito-tilassa**.
 
-- Jos et ole kirjautunut, paina **Kirjaudu** ja kirjaudu sisään.
+**Joka kerta:**
 
-**4.** Paina Chromen oikeasta yläkulmasta **palapelin kuvaa** 🧩.
+**1.** Poista Windows-koneen **Lataukset**-kansiosta kaikki tiedostot, joiden nimessä on `cookies`.
 
-**5.** Valitse **Get cookies.txt LOCALLY**.
+**2.** Avaa Chromessa incognito-ikkuna painamalla **Ctrl + Shift + N**.
 
-**6.** Paina **Export**.
+✅ Ikkuna on tumma, ja siinä lukee "Olet incognito-tilassa".
+
+**3.** Kirjoita incognito-ikkunan osoiteriville **google.com/maps** ja paina **Enter**.
+
+**4.** Paina oikeasta yläkulmasta **Kirjaudu** ja kirjaudu omalla Google-tililläsi (ville.rihtamo@…). Hyväksy kirjautuminen puhelimesta, jos Google pyytää sitä.
+
+**5.** Odota, että kartta latautuu.
+
+**6.** Paina incognito-ikkunan oikeasta yläkulmasta **palapelin kuvaa** 🧩.
+
+**7.** Valitse **Get cookies.txt LOCALLY**.
+
+**8.** Paina **Export**.
 
 ✅ Lataukset-kansioon tulee tiedosto `www.google.com_cookies.txt`.
 
-- Jos samanniminen tiedosto oli jo kansiossa, uuden nimi voi olla `www.google.com_cookies (1).txt`. Poista silloin vanhat cookies-tiedostot Lataukset-kansiosta ja tee kohdat 4–6 uudelleen, jotta nimi on oikea.
+**9.** Sulje incognito-ikkuna oikean yläkulman **X**:llä. **Älä paina "Kirjaudu ulos"**, koska se mitätöisi evästeet heti.
 
 ### Osa 2: Tiedosto Raspberry Pi:lle
 
-**7.** Paina **Windows-näppäintä**, kirjoita **PowerShell** ja paina **Enter**.
+**10.** Paina **Windows-näppäintä**, kirjoita **PowerShell** ja paina **Enter**.
 
-**8.** Kirjoita PowerShelliin yhdelle riville ja paina **Enter**:
+**11.** Kirjoita PowerShelliin yhdelle riville ja paina **Enter**:
 ```
 scp "$env:USERPROFILE\Downloads\www.google.com_cookies.txt" ville@Vadelma:~/hitster/perhekartta/google_cookies.txt
 ```
 
-**9.** Kirjoita **Raspberry Pi:n salasana** ja paina **Enter**.
+**12.** Kirjoita **Raspberry Pi:n salasana** ja paina **Enter**.
 
 ✅ Ruudulle tulee rivi, jossa on tiedoston nimi ja `100%`.
 
 ### Osa 3: Käynnistä Perhekartta uudelleen
 
-**10.** Kirjoita PowerShelliin ja paina **Enter**:
+**13.** Kirjoita PowerShelliin ja paina **Enter**:
 ```
 ssh ville@Vadelma
 ```
 
-**11.** Kirjoita **Raspberry Pi:n salasana** ja paina **Enter**.
+**14.** Kirjoita **Raspberry Pi:n salasana** ja paina **Enter**.
 
-**12.** Kirjoita ja paina **Enter**:
+**15.** Kirjoita ja paina **Enter**:
 ```
 sudo systemctl restart perhekartta
 ```
 Jos kone kysyy salasanaa, kirjoita Raspberry Pi:n salasana.
 
-**13.** Kirjoita ja paina **Enter**:
+**16.** Kirjoita ja paina **Enter**:
 ```
 exit
 ```
 Voit sulkea PowerShell-ikkunan.
 
-**14.** Poista Windows-koneen **Lataukset**-kansiosta tiedosto `www.google.com_cookies.txt`. Se on avain Google-tiliisi, eikä sitä kannata säilyttää.
+**17.** Poista Windows-koneen **Lataukset**-kansiosta tiedosto `www.google.com_cookies.txt`. Se on avain Google-tiliisi, eikä sitä kannata säilyttää.
 
-**15.** Avaa puhelimessa Perhekartta ja paina **Päivitä**.
+**18.** Avaa puhelimessa Perhekartta ja paina **Päivitä**.
 
 ✅ Elsa näkyy kartalla, eikä punaista laatikkoa enää ole.
 
-**Muista:** älä kirjaudu ulos Googlesta siinä Chromessa. Uloskirjautuminen mitätöi evästeet heti, ja tämä ohje pitäisi tehdä uudelleen.
+Perhekartta tallentaa jatkossa itse Googlen päivittämät evästeet, joten tätä ohjetta ei pitäisi tarvita usein.
 
 ---
 

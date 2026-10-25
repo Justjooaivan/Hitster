@@ -5,3 +5,4 @@ icloud_session/
 .venv/
 __pycache__/
 secret_key.txt
+google_cookies.tmp
