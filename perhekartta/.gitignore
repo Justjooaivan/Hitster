@@ -1,0 +1,6 @@
+# Omat tunnukset ja istunnot – näitä ei koskaan GitHubiin
+config.json
+google_cookies.txt
+icloud_session/
+.venv/
+__pycache__/

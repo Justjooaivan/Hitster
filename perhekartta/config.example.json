@@ -1,0 +1,20 @@
+{
+  "icloud": {
+    "apple_id": "sinun.apple.id@example.com",
+    "password": "apple-salasanasi",
+    "devices": {
+      "Ellan iPhone": "Ella"
+    }
+  },
+  "google": {
+    "account": "sinun.osoite@gmail.com",
+    "cookies_file": "google_cookies.txt",
+    "people": {
+      "Aino Virtanen": "Aino"
+    }
+  },
+  "app_password": "keksi-tähän-oma-salasana",
+  "host": "0.0.0.0",
+  "port": 8080,
+  "refresh_seconds": 60
+}

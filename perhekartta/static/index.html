@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1f2937" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Perhekartta</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root { --bg: #f3f4f6; --card: #fff; --text: #111827; --muted: #6b7280; --bar: #1f2937; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; color: var(--text); background: var(--bg); }
+    body { display: flex; flex-direction: column; }
+    header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bar); color: #fff; }
+    header h1 { font-size: 18px; margin: 0; flex: 1; }
+    header button { border: 0; border-radius: 8px; padding: 8px 12px; font-size: 15px; background: #3b82f6; color: #fff; cursor: pointer; }
+    header button:disabled { opacity: .6; }
+    #status { font-size: 12px; color: #d1d5db; }
+    main { flex: 1; display: flex; min-height: 0; }
+    #map { flex: 1; }
+    #list { width: 300px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .card { background: var(--card); border-radius: 10px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,.12); cursor: pointer; border-left: 6px solid var(--c); }
+    .card h2 { margin: 0 0 4px; font-size: 16px; display: flex; justify-content: space-between; }
+    .card .src { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .card p { margin: 2px 0; font-size: 13px; color: var(--muted); }
+    .card .old { color: #b45309; }
+    .card a { font-size: 13px; }
+    .error { background: #fef2f2; color: #991b1b; border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+    .pin { width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff; background: var(--c); color: #fff;
+           display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+    @media (max-width: 700px) {
+      main { flex-direction: column; }
+      #list { width: auto; max-height: 38vh; order: 2; }
+      #map { order: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Perhekartta</h1>
+    <span id="status">Haetaan…</span>
+    <button id="refresh">Päivitä</button>
+  </header>
+  <main>
+    <div id="map"></div>
+    <div id="list"></div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const COLORS = ["#e11d48", "#2563eb", "#16a34a", "#9333ea", "#ea580c"];
+    const map = L.map("map").setView([62.5, 25.5], 6);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "© OpenStreetMap",
+    }).addTo(map);
+
+    const layers = L.layerGroup().addTo(map);
+    const listEl = document.getElementById("list");
+    const statusEl = document.getElementById("status");
+    const button = document.getElementById("refresh");
+    let firstLoad = true;
+    let timer = null;
+
+    function ago(iso) {
+      if (!iso) return "aika tuntematon";
+      const min = Math.round((Date.now() - new Date(iso)) / 60000);
+      if (min < 1) return "juuri nyt";
+      if (min < 60) return `${min} min sitten`;
+      const h = Math.floor(min / 60);
+      if (h < 24) return `${h} h ${min % 60} min sitten`;
+      return new Date(iso).toLocaleString("fi-FI");
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function render(data) {
+      layers.clearLayers();
+      listEl.innerHTML = "";
+      const bounds = [];
+
+      data.errors.forEach(e => {
+        const div = document.createElement("div");
+        div.className = "error";
+        div.textContent = `${e.source}: ${e.message}`;
+        listEl.appendChild(div);
+      });
+
+      data.people.forEach((p, i) => {
+        const color = COLORS[i % COLORS.length];
+        const latlng = [p.lat, p.lon];
+        bounds.push(latlng);
+
+        if (p.accuracy) {
+          L.circle(latlng, { radius: p.accuracy, color, weight: 1, fillOpacity: 0.12 }).addTo(layers);
+        }
+        const icon = L.divIcon({
+          className: "", iconSize: [36, 36], iconAnchor: [18, 18],
+          html: `<div class="pin" style="--c:${color}">${escapeHtml(p.name.charAt(0))}</div>`,
+        });
+        const marker = L.marker(latlng, { icon }).addTo(layers)
+          .bindPopup(`<b>${escapeHtml(p.name)}</b><br>${ago(p.timestamp)}`);
+
+        const stale = p.timestamp && Date.now() - new Date(p.timestamp) > 30 * 60000;
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.setProperty("--c", color);
+        card.innerHTML = `
+          <h2>${escapeHtml(p.name)} <span class="src">${p.source === "iCloud" ? "iPhone" : "Android"}</span></h2>
+          <p class="${stale ? "old" : ""}">📍 ${ago(p.timestamp)}${p.accuracy ? ` · ±${Math.round(p.accuracy)} m` : ""}</p>
+          ${p.address ? `<p>${escapeHtml(p.address)}</p>` : ""}
+          ${p.battery != null ? `<p>🔋 ${p.battery} %</p>` : ""}
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}" target="_blank" rel="noopener">Reittiohjeet</a>`;
+        card.addEventListener("click", ev => {
+          if (ev.target.tagName === "A") return;
+          map.flyTo(latlng, 16);
+          marker.openPopup();
+        });
+        listEl.appendChild(card);
+      });
+
+      if (!data.people.length && !data.errors.length) {
+        listEl.innerHTML = '<div class="error">Sijainteja ei löytynyt. Tarkista config.json.</div>';
+      }
+      if (firstLoad && bounds.length) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        firstLoad = false;
+      }
+      statusEl.textContent = "Haettu " + new Date(data.fetched_at).toLocaleTimeString("fi-FI", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function load(force = false) {
+      button.disabled = true;
+      statusEl.textContent = "Haetaan…";
+      try {
+        const res = await fetch("api/locations" + (force ? "?refresh=1" : ""));
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        render(data);
+        clearTimeout(timer);
+        timer = setTimeout(load, data.refresh_seconds * 1000);
+      } catch (err) {
+        statusEl.textContent = "Haku epäonnistui";
+        clearTimeout(timer);
+        timer = setTimeout(load, 60000);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    button.addEventListener("click", () => load(true));
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+    load();
+  </script>
+</body>
+</html>
