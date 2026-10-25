@@ -30,26 +30,35 @@ except PyiCloudFailedLoginException:
     ) from None
 
 if api.requires_2fa:
-    # pyydetään koodi ensisijaisesti tekstiviestinä, koska Apple-laitetta ei välttämättä ole
+    # Pyydetään koodi tekstiviestinä. Apple ehdottaa muuten Apple-laitetta,
+    # jos tiliin on joskus liitetty sellainen.
+    def request_sms():
+        phone = getattr(api, "_trusted_phone_number", lambda: None)()
+        if phone is None:
+            return False
+        api._request_sms_2fa_code()
+        return True
+
     try:
-        if getattr(api, "_can_request_sms_2fa_code", lambda: False)():
-            api._request_sms_2fa_code()
+        if request_sms():
+            print("Apple lähettää koodin tekstiviestinä puhelimeesi.")
         else:
             api.request_2fa_code()
+            print("Apple ei antanut tekstiviestivaihtoehtoa, joten koodi tulee Apple-laitteelle.")
     except Exception as exc:
         print(f"Koodin pyytäminen ei onnistunut ({exc}). Jos sait koodin silti, syötä se.")
-    if api.two_factor_delivery_method == "sms":
-        print("Apple lähettää koodin tekstiviestinä puhelimeesi.")
-    else:
-        print("Apple lähettää koodin Apple-laitteellesi.")
 
     for attempt in range(3):
-        code = input("Syötä 6-numeroinen koodi: ").strip().replace(" ", "")
+        code = input("Syötä 6-numeroinen koodi (tai paina Enter, jos tekstiviestiä ei tullut): ")
+        code = code.strip().replace(" ", "")
+        if not code:
+            print("Pyydän uuden tekstiviestin." if request_sms() else "Tekstiviestiä ei voi pyytää.")
+            continue
         if api.validate_2fa_code(code):
             break
         print("Koodi ei kelvannut, yritä uudelleen.")
     else:
-        raise SystemExit("Koodi ei kelvannut kolmella yrityksellä. Aja skripti uudelleen.")
+        raise SystemExit("Koodi ei kelvannut. Aja skripti uudelleen.")
     if not api.is_trusted_session:
         api.trust_session()
 elif api.requires_2sa:
