@@ -124,6 +124,52 @@ def fetch_icloud():
 
 # ---------------------------------------------------------------- Google ----
 
+# Selain pitää Google-kirjautumisen voimassa kierrättämällä evästettä
+# __Secure-1PSIDTS muutaman minuutin välein. Perhekartta tekee saman, jotta
+# kerran viedyt evästeet eivät vanhene.
+GOOGLE_ROTATE_URL = "https://accounts.google.com/RotateCookies"
+GOOGLE_ROTATE_SECONDS = 540
+_google_cookie_lock = threading.Lock()
+
+
+def _google_cookie_file():
+    cfg = CONFIG.get("google") or {}
+    if not cfg.get("account"):
+        return None
+    return BASE_DIR / cfg.get("cookies_file", "google_cookies.txt")
+
+
+def rotate_google_cookies():
+    """Pyytää Googlelta uuden kirjautumisevästeen ja tallentaa sen tiedostoon."""
+    from locationsharinglib import Service
+
+    path = _google_cookie_file()
+    if path is None or not path.exists():
+        return False
+    with _google_cookie_lock:
+        session = Service._get_session_from_cookie_file(path.read_text(encoding="utf-8"))
+        response = session.post(
+            GOOGLE_ROTATE_URL,
+            headers={"Content-Type": "application/json"},
+            data='[000,"-0000000000000000000"]',
+            timeout=30,
+        )
+        if response.status_code == 401:
+            app.logger.warning("Googlen evästeet ovat vanhentuneet, kierrätys ei onnistu.")
+            return False
+        response.raise_for_status()
+        _save_google_cookies(session.cookies, path)
+    return True
+
+
+def _google_keepalive():
+    while True:
+        try:
+            rotate_google_cookies()
+        except Exception as exc:  # verkkokatko tms., yritetään uudelleen myöhemmin
+            app.logger.warning("Googlen evästeiden kierrätys epäonnistui: %s", exc)
+        time.sleep(GOOGLE_ROTATE_SECONDS)
+
 
 def _save_google_cookies(jar, path):
     """Tallentaa Googlen päivittämät evästeet takaisin tiedostoon.
@@ -161,19 +207,20 @@ def fetch_google():
     from locationsharinglib import Service
     from locationsharinglib.locationsharinglibexceptions import InvalidCookies
 
-    cookies = BASE_DIR / cfg.get("cookies_file", "google_cookies.txt")
+    cookies = _google_cookie_file()
     if not cookies.exists():
         raise RuntimeError(f"Google-evästetiedostoa ei löydy: {cookies.name}")
-    try:
-        service = Service(cookies_file=str(cookies), authenticating_account=cfg["account"])
-    except InvalidCookies:
-        raise RuntimeError(
-            "Googlen evästeet ovat vanhentuneet. Vie uudet evästeet "
-            "(VIRHETILANTEET.md, Ohje B)."
-        ) from None
+    with _google_cookie_lock:
+        try:
+            service = Service(cookies_file=str(cookies), authenticating_account=cfg["account"])
+        except InvalidCookies:
+            raise RuntimeError(
+                "Googlen evästeet ovat vanhentuneet. Vie uudet evästeet "
+                "(VIRHETILANTEET.md, Ohje B)."
+            ) from None
+        shared = service.get_shared_people()
+        _save_google_cookies(service._session.cookies, cookies)
     wanted = cfg.get("people") or {}
-    shared = service.get_shared_people()
-    _save_google_cookies(service._session.cookies, cookies)
 
     people = []
     for person in shared:
@@ -293,4 +340,6 @@ if __name__ == "__main__":
         raise SystemExit(
             "Aseta config.jsoniin app_password ennen kuin avaat sovelluksen muille laitteille."
         )
+    if _google_cookie_file():
+        threading.Thread(target=_google_keepalive, daemon=True).start()
     app.run(host=host, port=int(CONFIG.get("port", 8080)))
